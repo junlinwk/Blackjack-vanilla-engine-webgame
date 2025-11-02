@@ -108,18 +108,18 @@
     .row .label{opacity:.8; font-weight:600; margin-bottom:8px;}
     .hands{display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; position:relative; min-height:var(--card-h);}
     .hand{display:flex; align-items:flex-end; gap:10px; min-height:var(--card-h); position:relative; flex-wrap:wrap}
-    .hands.split > .hand:not(:first-child){position: relative;padding-left: 12px; margin-left: 8px;  }
+    .hands.split > .hand:not(:first-child){position: relative; padding-left:0; margin-left:8px;}
 
-    .hands.split > .hand:not(:first-child)::before{content: "";position: absolute;left: 0;top: -6px; bottom: -6px; width: 3px;
+    .hands.split > .hand:not(:first-child)::before{content: ""; position: absolute; left:-12px; top:-6px; bottom:-6px; width:3px;
       background: linear-gradient(
       to bottom,
       rgba(251,191,36,.12),
       var(--gold),
       rgba(251,191,36,.12)
       );
-      border-radius: 2px;
+      border-radius:2px;
       box-shadow: 0 0 14px rgba(251,191,36,.35);
-}
+    }
     .hands .hand.active::after{content:""; position:absolute; inset:-6px; border:2px solid var(--gold); border-radius:14px; box-shadow:0 0 15px rgba(251,191,36,.45); pointer-events:none; opacity:.9;}
     .hands .hand.done{opacity:.55;}
     .card.placeholder{visibility:hidden;}
@@ -330,6 +330,7 @@
                   <th style="text-align:left; padding:6px; border-bottom:1px solid rgba(255,255,255,.15);">Time</th>
                   <th style="text-align:left; padding:6px; border-bottom:1px solid rgba(255,255,255,.15);">P.Pts</th>
                   <th style="text-align:left; padding:6px; border-bottom:1px solid rgba(255,255,255,.15);">D.Pts</th>
+                  <th style="text-align:left; padding:6px; border-bottom:1px solid rgba(255,255,255,.15);">Winner</th>
                   <th style="text-align:left; padding:6px; border-bottom:1px solid rgba(255,255,255,.15);">Bankroll</th>
                 </tr>
               </thead>
@@ -706,14 +707,15 @@
           <td style="padding:6px; border-bottom:1px solid rgba(255,255,255,.06)">${r.time}</td>
           <td style="padding:6px; border-bottom:1px solid rgba(255,255,255,.06)">${r.playerPoints}</td>
           <td style="padding:6px; border-bottom:1px solid rgba(255,255,255,.06)">${r.dealerPoints}</td>
+          <td style="padding:6px; border-bottom:1px solid rgba(255,255,255,.06)">${r.winner || 'N/A'}</td>
           <td style="padding:6px; border-bottom:1px solid rgba(255,255,255,.06)">$${fmt(r.bankrollAfter)}</td>
         `;
         if(lsTbody) lsTbody.appendChild(tr);
       });
       const ssTbody = $('#ssTable tbody'); if(ssTbody) ssTbody.innerHTML='';
       ss.forEach(r=>{
-        const pc = Array.isArray(r.playerCards)? r.playerCards.join(' ') : '';
-        const dc = Array.isArray(r.dealerCards)? r.dealerCards.join(' ') : '';
+        const pc = typeof r.playerCards === 'string' ? r.playerCards : (Array.isArray(r.playerCards) ? r.playerCards.join(' ') : '');
+        const dc = Array.isArray(r.dealerCards) ? r.dealerCards.join(' ') : (typeof r.dealerCards === 'string' ? r.dealerCards : '');
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td style="padding:6px; border-bottom:1px solid rgba(255,255,255,.06)">${r.round}</td>
@@ -800,9 +802,10 @@
       {
         const roundNo = (state.stats.hands || 0) + 1;
         const ssArr = loadArraySS(SS_ROUNDS_KEY);
-        const playerCards = (round.playerHands[0]?.cards||[]).map(c=>c.r+c.s);
+        // Record all player hands joined with divider | for split hands
+        const allPlayerCards = round.playerHands.map(h => (h.cards||[]).map(c => c.r+c.s).join(' ')).join(' | ');
         const dealerUp = (round.dealer[0]?.r ? (round.dealer[0].r+round.dealer[0].s) : '');
-        ssArr.push({ round: roundNo, playerCards, dealerCards: [dealerUp, '🂠'] });
+        ssArr.push({ round: roundNo, playerCards: allPlayerCards, dealerCards: [dealerUp] });
         saveArraySS(SS_ROUNDS_KEY, ssArr);
       }
 
@@ -1083,10 +1086,28 @@
         // Calculate dealer points excluding face-down card (🂠)
         const dealerVisibleCards = round.dealer.filter(c => c.r !== '🂠');
         const dealerPts = handValue(dealerVisibleCards).total;
+        
+        // Determine winner: Player, Dealer, or Push
+        let winner = 'Push';
+        if(winCount > loseCount) winner = 'Player';
+        else if(loseCount > winCount) winner = 'Dealer';
+        
         const lsArr = loadArrayLS(LS_ROUNDS_KEY);
-        lsArr.push({ round: state.stats.hands, time: nowISO(), playerPoints: playerBest, dealerPoints: dealerPts, bankrollAfter: state.bankroll });
+        lsArr.push({ round: state.stats.hands, time: nowISO(), playerPoints: playerBest, dealerPoints: dealerPts, winner: winner, bankrollAfter: state.bankroll });
         saveArrayLS(LS_ROUNDS_KEY, lsArr);
         CHEAT_ON = false;
+        
+        // Update session storage with final player cards and dealer cards
+        const ssArr = loadArraySS(SS_ROUNDS_KEY);
+        if(ssArr.length > 0){
+          const lastRound = ssArr[ssArr.length - 1];
+          // Record all player hands joined with divider | for split hands
+          const finalPlayerCards = round.playerHands.map(h => (h.cards||[]).map(c => c.r+c.s).join(' ')).join(' | ');
+          const finalDealerCards = round.dealer.filter(c => c.r !== '🂠').map(c => c.r + c.s);
+          lastRound.playerCards = finalPlayerCards;
+          lastRound.dealerCards = finalDealerCards;
+          saveArraySS(SS_ROUNDS_KEY, ssArr);
+        }
       }
       if(newRoundBtn) newRoundBtn.disabled = false;
       sessionStorage.removeItem(SS_KEY);
