@@ -1146,7 +1146,7 @@
           decks: 6,
           penetration: 0.75,
           stats: { hands: 0, w: 0, p: 0, l: 0, profit: 0, wagered: 0 },
-          settings: { s17: true, audio: true, basic: false }, // 預設sounds on
+          settings: { s17: false, audio: true, basic: false }, // s17=false 表示 H17 規則（莊家軟17要牌）
         };
         const round = {
           shoe: [],
@@ -2313,8 +2313,10 @@
         });
 
         $("#resetBank").addEventListener("click", () => {
-          localStorage.removeItem(LS_KEY);
-          sessionStorage.removeItem(SS_KEY);
+          localStorage.removeItem(LS_KEY);           // 清空遊戲狀態
+          localStorage.removeItem(LS_ROUNDS_KEY);    // 清空所有回合歷史
+          sessionStorage.removeItem(SS_KEY);         // 清空當前遊戲
+          sessionStorage.removeItem(SS_ROUNDS_KEY);  // 清空當前會話卡牌記錄
           location.reload();
         });
 
