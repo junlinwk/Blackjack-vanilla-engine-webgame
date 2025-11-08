@@ -11,8 +11,9 @@
 6. [設定](#settings)
 7. [Storage](#storage)
 8. [Sound Code說明](#sound-code說明)
-9. [Code Implementation Structure](#code-implement-structure)
-10. [能調的地方](#能調的地方)
+9. [桌面Texture](#桌面texture)
+10. [Code Implementation Structure](#code-implement-structure)
+11. [能調的地方](#能調的地方)
 
 ---
 
@@ -21,7 +22,7 @@
 
 > 開啟方式是 直接開 <mark>blackjack.html</mark>
 
-## 有做的功能都統整在這了
+## 有做的功能跟特色都統整在這了
 - 所有的BlackJack規則 (包含Stands on soft17 開關)
 - 發牌動畫
 - 籌碼動畫
@@ -31,6 +32,11 @@
 - Cheat button (dealer win)
 - Strategy hint button
 - 鍵盤快捷鍵(畫面上有使用方式)
+- 嘗試模仿毛氈桌面的效果
+- 上面做了一疊牌 (雖然這好像不是功能)
+- Win/Lose亮框框
+- 右上角統計 **手數** 跟 **Win/Tie/Loss** 跟 **ROI (投報率)**
+- R可以一直加錢 (課金換籌碼的意思) 一直玩一直爽
 
 ---
 
@@ -582,7 +588,65 @@ startY += verticalLift (220px)
 endY -= verticalLift / 5
 ```
 
-#### 4. 結果判定
+
+#### 4. 莊家 - `dealerPlay()`
+
+**標準（no cheat）：**
+```javascript
+while (true) {
+  const v = handValue(round.dealer);
+  const soft = v.soft;
+  const total = v.total;
+  
+  const needHit = 
+    total < 17 ||
+    (!state.settings.s17 && total === 17 && soft);
+  
+  if (needHit) {
+    const c = drawCard();
+    round.dealer.push(c);
+    await dealAnim(c, dealerHandEl, true);
+    await sleep(200);
+  } else {
+    break;
+  }
+}
+```
+
+**作弊（CHEAT_ON = true）：**
+```javascript
+if (CHEAT_ON) {
+  // 算玩家最好點數
+  const playerBest = Math.max(
+    ...round.playerHands.map(h => {
+      const v = handValue(h.cards);
+      return v.total > 21 ? 0 : v.total;
+    })
+  );
+  
+  // 找能贏但不爆的牌
+  while (true) {
+    const v = handValue(round.dealer);
+    if (v.total >= 17 && v.total > playerBest) break;
+    
+    // 找最佳牌：贏又不爆
+    const minNeed = Math.max(playerBest + 1 - v.total, 1);
+    const maxSafe = 21 - v.total;
+    
+    const ok = bringCardToTop((c) => {
+      const vv = valueOfRank(c.r);
+      return (vv >= minNeed && vv <= maxSafe) ||
+             (c.r === 'A' && 1 >= minNeed && 1 <= maxSafe);
+    });
+    
+    const c = drawCard();
+    round.dealer.push(c);
+    await dealAnim(c, dealerHandEl, true);
+  }
+}
+```
+
+#### 5. 結果
 ```javascript
 for (const outcome of outcomes) {
   const pv = handValue(playerHand).total
@@ -666,4 +730,58 @@ newSound: (() => {
 
 ---
 
+## 桌面Texture
 
+### 整體設計理念
+
+背景用**多層紋理疊加**，去模擬賭場毛氈桌面
+
+### Body Background
+
+**8 層紋理疊起來：**
+
+#### 1. 紋理層 1 - 斜紋 (45°)
+```css
+repeating-linear-gradient(
+  45deg,
+  transparent,
+  transparent 1px,
+  rgba(255, 255, 255, 0.08) 1px,
+  rgba(255, 255, 255, 0.08) 3px
+)
+```
+
+#### 2. 紋理層 2 - 反斜紋 (-45°)
+```css
+repeating-linear-gradient(
+  -45deg,
+  transparent,
+  transparent 2px,
+  rgba(0, 0, 0, 0.12) 2px,
+  rgba(0, 0, 0, 0.12) 5px
+)
+```
+#### 3. 毛氈 - 孔洞(垂直)
+#### 4. 毛氈 - 波紋(水平)
+#### 5. 細微凹凸 
+#### 6. 光線層 
+#### 7. 陰影層 
+#### 8. 中心聚焦
+
+**Background Size 配置：**
+```css
+background-size: 
+  100% 100%,    /* 1-4 */
+  100% 100%,
+  4px 100%,     /* 3 */
+  100% 4px,     /* 4 */
+  4px 4px,      /* 5 */
+  100% 100%,    /* 6-8 */
+  100% 100%,
+  100% 100%;
+```
+
+### 操作桌面毛氈效果（.felt）
+**6 層紋理**
+
+---
