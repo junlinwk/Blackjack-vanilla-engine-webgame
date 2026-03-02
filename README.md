@@ -1,6 +1,798 @@
-# HW3 Report
+# Blackjack-vanilla-engine-webgame
+## Language/語言
+ [English](#catalogue) | [繁體中文](#目錄)
+
+ 
+## Catalogue
 
 ## Catalogue
+
+0. [Overview](#overview)
+1. [Feature List](#feature-list)
+2. [Structure](#structure)
+3. [Features](#features)
+4. [Game Rules](#game-rules)
+5. [Keyboard Shortcuts](#keyboard-shortcuts)
+6. [Settings](#settings)
+7. [Storage](#storage)
+8. [Sound Code Explanation](#sound-code-explanation)
+9. [Table Texture](#table-texture)
+10. [Code Implementation Structure](#code-implementation-structure)
+11. [Adjustable Parameters](#adjustable-parameters)
+
+---
+
+## Overview
+>This is a <mark>1 player vs 1 dealer</mark> BlackJack Game
+
+> Open the game by directly opening <mark>blackjack.html</mark>
+
+## Feature List
+- All BlackJack rules (including Stands on soft17 toggle)
+- Card dealing animation
+- Chip animation
+- Penetration and Decks
+- Sound effects (bgm & dealing & Win/Lose & betting chips)
+- Display button (localStorage & sessionStorage)
+- Cheat button (dealer win)
+- Strategy hint button
+- Keyboard shortcuts (usage shown on screen)
+- Simulated felt table surface effect
+- Deck stack visualization (though this may not be a feature per se)
+- Win/Lose glowing frame
+- Top-right statistics for **Hands**, **Win/Tie/Loss**, and **ROI (Return on Investment)**
+- Press R to add money (top-up chips) and keep playing
+
+---
+
+## Structure
+
+```
+Blackjack-vanilla-engine-webgame/
+├── blackjack.html          # main page (open this)   
+├── sounds/                 # sound effects
+│   ├── bgm.mp3             # background music 
+│   ├── deal.mp3            # card dealing
+│   ├── chips.mp3           # betting chips
+│   ├── win.mp3             # win
+│   └── fail.mp3            # lose
+└── README.md               # this file
+```
+
+---
+
+## Features
+
+### Game Features
+
+| Feature | Description |
+|---------|-------------|
+| **Deal** | Start a new round, deal initial cards to player and dealer |
+| **Hit** | Draw one more card to hand |
+| **Stand** | Keep current hand, end player's turn |
+| **Double** | Double bet and receive one card (only available on initial hand) |
+| **Split** | Split two cards of the same value into two hands (available when dealt a pair) |
+| **Surrender** | Forfeit current hand, get back half of bet |
+| **Insurance** | Available when dealer shows Ace (max 50% of base bet) |
+
+### Betting
+
+**Chip Denominations:** $5, $25, $50, $100, $500
+
+**How to Bet:**
+- Click chip buttons to add to bet
+- Current bet amount is displayed
+- Press Backspace to clear bet
+
+### Statistics (Display Button)
+
+**Real-time Display:**
+| Field | Description |
+|-------|-------------|
+| **Bankroll** | Available funds for betting |
+| **Hands** | Number of completed rounds |
+| **W (Wins)** | Number of winning hands |
+| **P (Push)** | Number of tied hands |
+| **L (Loss)** | Number of losing hands |
+| **ROI (%)** | Return on Investment (profit/total wagered) |
+| **Insurance** | Available when dealer shows Ace (max 50% of base bet) |
+
+### Reset Button
+
+**Function: Complete game reset**
+
+Clears all data:
+
+| Item | Effect |
+|------|--------|
+| Bankroll | Reset to $1,000 |
+| Statistics | W/P/L/Hands all reset to zero |
+| Current Game Progress | Stop and clear |
+| Round History | Clear all records in Storage |
+| Card Data | Clear current session data |
+| Settings | Restore to default |
+
+---
+
+### Cheat Button
+
+**Function: Enable cheat mode to guarantee dealer wins the current round**
+
+**How to Use:**
+```
+1. Place your bet (add chips)
+2. Click "Cheat" button
+3. Message: "Cheat enabled: Dealer will win this round."
+4. Click "Deal" to start the game
+5. Dealer will automatically hit and inevitably win the round
+6. Cheat mode automatically turns off for next round
+```
+
+**How it Works:**
+
+1. **Calculate Player's Best Score**
+   - Evaluate the highest valid score of all player hands
+
+2. **Find Winning Card**
+   - Find a card in the deck that beats player but doesn't bust
+   - Condition: `Player Score < Card Value ≤ 21`
+
+3. **Reorder Deck**
+   - If no suitable card found, automatically move the optimal card to the top
+   - Uses `bringCardToTop()` to reorder
+
+4. **Keep Hitting**
+   - Until dealer:
+     - ≥ 17 (meets stand condition)
+     - **AND > Player's best score (ensures win)**
+
+**Code:** `if (CHEAT_ON)` block in `dealerPlay()`
+
+---
+
+### Animations
+
+- Chip bounce animation (when betting)
+- Win/Lose/Push glowing frame effect
+- Card dealing animation
+- Active hand highlight (with divider during Split)
+- Button enable/disable effects
+
+
+---
+
+## Game Rules
+
+### Rules Overview
+
+**Objective:** Get hand total as close to 21 as possible without exceeding 21
+
+**Card Values:**
+- 2-10 - Face value
+- J, Q, K - 10 points
+- A (Ace) - 11 points or 1 point (automatically chooses best value)
+
+**Hand Evaluation:**
+
+```
+Total ≤ 21     - Valid
+Total > 21     - Bust, hand loses
+Soft 17        - Hand with Ace counted as 11 (e.g., A+6 = 17)
+Hard 17        - Hand with no Ace counted as 11 (e.g., 10+A+6 = 17)
+```
+
+### Game Flow
+
+#### 1. Betting
+```
+→ Click chips or press number keys (1-5) to bet
+→ Or press Backspace to clear
+→ Minimum bet ≥ $1
+→ Cannot exceed current Bankroll
+```
+
+#### 2. Dealing
+```
+→ Click "Deal" button or press Space to start
+→ Player receives 2 cards (face up)
+→ Dealer receives 2 cards (1 face up, 1 face down)
+→ Check for Blackjack (BJ)
+```
+
+#### 3. Player Actions
+```
+→ Choose from:
+  - Hit (H): Draw a card
+  - Stand (S): Keep current hand
+  - Double (D): Double bet
+  - Split (X): Split pair
+  - Surrender (U): Forfeit
+  - Insurance (I): Buy insurance (if dealer shows Ace)
+→ Automatically ends when reaching 21 or busting
+```
+
+#### 4. Dealer Actions
+```
+→ Reveal dealer's hole card
+→ Auto hit/stand: (Hit on Soft17 is default OFF)
+  - Dealer total < 17: Must hit
+  - Dealer total ≥ 17: Must stand
+  (If "Stand on Soft 17" is enabled below, dealer stands on soft 17)
+```
+
+#### 5. Settlement
+```
+→ Compare scores and determine result:
+  - Win-BJ: Player 21, dealer not 21 → Payout 3:2
+  - Win: Player score > dealer → Payout 1:1
+  - Tie: Same score → Bet returned
+  - Lose: Player score < dealer or bust → Loss
+  - Surrender: Already surrendered → Lose 50% of bet
+```
+
+### Special Cases
+
+#### Blackjack
+- **Condition:** Initial 2 cards total 21 (10-value card + A)
+- **Payout:** 1.5x bet (pay 1 + 1.5)
+- **Exception:** If dealer also has BJ, it's a tie
+
+#### Split
+- **Condition:** Initial 2 cards with same value or both are 10-value (10/J/Q/K any combo)
+- **Action:** Split two cards into two hands, same bet amount
+- **Limit:** Can only split once per round, can hit or double after split
+- **Exception:** A-A split allows only one card each (cannot split or double again)
+
+#### Double Down
+- **Condition:** On initial 2 cards
+- **Action:** Double bet and receive exactly 1 card
+- **Limit:** Cannot double or split after doubling
+
+#### Insurance
+- **Trigger:** When dealer shows Ace
+- **Bet:** Maximum half of base bet
+- **Payout:** If dealer has BJ → Payout 2:1; otherwise lose insurance
+- **Independent:** Insurance result is independent of main hand
+
+#### Surrender
+- **Condition:** On initial 2 cards and **no actions taken** (cannot surrender after actions)
+- **Effect:** Lose half of bet, round ends
+
+### Deck Rules
+
+**Deck Configuration:**
+- Uses **6 decks** of standard cards (adjustable 0-6 decks)
+- Each deck contains 52 cards (13 ranks × 4 suits)
+- Total of 312 cards
+
+**Shuffle Rules:**
+1. **Trigger Shuffle**: When deck is empty or reaches cut card (Penetration 75%)
+2. **Cut Card**: Default at 75% position (adjustable)
+3. **Fisher-Yates Shuffle Algorithm**: Ensures random distribution
+
+---
+
+## Keyboard Shortcuts
+
+### Actions
+
+| Shortcut | Function | When Available |
+|----------|----------|----------------|
+| **Space** | Deal | After betting, ready phase |
+| **H** | Hit | During game |
+| **S** | Stand | During game |
+| **D** | Double | On initial hand |
+| **X** | Split | When dealt pair |
+| **U** | Surrender | On initial hand |
+| **I** | Insurance | When dealer shows Ace |
+| **N** | New Round | After settlement |
+
+### Betting
+
+| Shortcut | Function | Equivalent To |
+|----------|----------|---------------|
+| **1** | Bet $5 | Click $5 chip |
+| **2** | Bet $25 | Click $25 chip |
+| **3** | Bet $50 | Click $50 chip |
+| **4** | Bet $100 | Click $100 chip |
+| **5** | Bet $500 | Click $500 chip |
+| **Backspace** | Clear bet | Return all chips |
+
+### Special
+
+| Shortcut | Function |
+|----------|----------|
+| **R** | Top-up! +$1,000 (Rebuy) |
+| **B** | Toggle basic strategy hint |
+
+---
+
+## Settings
+
+### Settings in Bottom-Left Corner
+
+### 1. Stands on Soft 17 (Soft 17 stand, default OFF)
+```
+☑ OFF (Dealer stands on soft 17 - favorable to player)
+☐ ON (Dealer hits on soft 17 - favorable to dealer)
+```
+>Note: OFF meets PPT requirements
+
+**Example:**<br>
+- A + 6 = Soft 17
+- 10 + A + 6 = Hard 17
+>If any Ace counts as 11, it's soft
+
+### 2. Sounds (default ON)
+```
+☐ OFF (no sound effects & background music)
+☑ ON (all sound effects on)
+```
+
+**Sound Effects:**
+- Background music - Loops (volume 0.25)
+- Dealing - Plays when dealing (volume 1.0)
+- Chips - Plays when betting (volume 0.5)
+- Win - Plays when winning (volume 0.6)
+- Fail - Plays when losing (volume 0.6)
+
+### 3. Basic Strategy
+
+```
+☑ OFF (No hints shown)
+☐ ON (Shows optimal decision hints)
+```
+> Turn on if you don't know how to play, it will suggest moves
+
+### Adjustable Parameters (defaults below)
+
+```javascript
+// Before init
+decks: 6                    // Number of decks used
+penetration: 0.75          // Shuffle point (0.0-1.0)
+s17: false                 // Dealer stands on soft 17
+audio: true                // Sound on
+basic: false               // Strategy off
+```
+
+---
+
+## Storage
+
+### localStorage (Persistent)
+
+**key 1:** `bj_state_v1`
+
+**Contents** :
+```javascript
+{
+  bankroll: 1000,          
+  decks: 6,               
+  penetration: 0.75,      
+  stats: {
+    hands: 0,               // Hands played
+    w: 0,                   // Wins
+    p: 0,                   // Pushes
+    l: 0,                   // Losses
+    profit: 0,              // Profit
+    wagered: 0              // Total wagered
+  },
+  settings: {
+    s17: false,             // Stand on soft 17?
+    audio: true,            // Sound
+    basic: false            // Basic strategy
+  }
+}
+```
+
+**Storage Method:**
+- Read on init
+- Save immediately after bet/action/settlement
+- Save when settings change
+
+### sessionStorage (Current Window)
+
+**key 2:** `bj_session_v1`
+
+**Contents** : Game Status
+```javascript
+{
+  round: {
+    shoe: [],              // Remaining deck
+    index: 0,              // Current draw position
+    discard: [],           // Used cards
+    playerHands: [],       // Player hands
+    dealer: [],            // Dealer hand
+    active: false,         // Game in progress?
+    activeHandIndex: 0,    // Current active hand index
+    baseBet: 0,            // Base bet
+    insuranceBet: 0,       // Insurance bet
+    splitPerformed: false  // Split performed?
+  }
+}
+```
+
+**key 3:** `bj_session_rounds_v1`
+
+**Contents** : Current session round records
+```javascript
+[
+  {
+    round: 1,
+    playerCards: "K♠ 5♥",    // Player cards
+    dealerCards: ["10♦"]       // Dealer up card
+  }
+  // ...more rounds
+]
+```
+
+### localStorage (History)
+
+**key 4:** `bj_rounds_v1`
+
+**Contents** : Summary of all rounds
+```javascript
+[
+  {
+    round: 1,
+    time: "2025-11-04T10:30:00.000Z",  // ISO timestamp
+    playerPoints: 19,       // Player score
+    dealerPoints: 17,       // Dealer score
+    winner: "Player",       // Winner
+    bankrollAfter: 1050     // Player remaining Bankroll
+  }
+  // ... more rounds 
+]
+```
+
+### Viewing Data
+
+**How to View:**
+1. Click `Display` button
+2. Two tables appear:
+   - **Local Storage Rounds** - Round History
+   - **Session Storage Rounds** - Current session card details
+
+**Clear Data:**
+- Click "Reset" button → Clear all data
+
+---
+
+## Sound Code Explanation
+
+### Sound
+
+```javascript
+const SND = {
+  bgm: { Audio object, volume: 0.25, loop: true },
+  deal: { Audio object, volume: 1.0 },
+  chips: { Audio object, volume: 0.5 },
+  win: { Audio object, volume: 0.6 },
+  fail: { Audio object, volume: 0.6 }
+};
+playBGM()     
+stopBGM()     
+toggleBGM()    
+```
+
+### Playback Method
+
+#### Background Music (BGM)
+```javascript
+// Auto-play on init
+init() → playBGM()
+
+audioEl.addEventListener('change', () => {
+  state.settings.audio = audioEl.checked
+  toggleBGM()
+})
+```
+
+#### Sound Effects
+```javascript
+// Standard playback (can overlap)
+if (state.settings.audio) {
+  SND[type].play()
+}
+
+// Interrupt playback - used for chips (prevent too fast clicking)
+if (state.settings.audio) {
+  SND.chips.currentTime = 0  // Reset to start
+  SND.chips.play()           // Play
+}
+```
+
+---
+
+## Code Implementation Structure
+
+### Structure Approach
+
+```javascript
+(function() {
+  // tools
+  const $ = selector => document.querySelector(selector)
+  const $$ = selector => document.querySelectorAll(selector)
+  
+  // const
+  const RANKS = ['A','2',...,'K']
+  const SUITS = ['♠','♥','♦','♣']
+  
+  // status
+  const state = { bankroll, decks, stats, settings }
+  const round = { shoe, dealer, playerHands, ... }
+  
+  // logic
+  function deal() { ... }
+  function playerHit() { ... }
+  function settle() { ... }
+  
+  // animation
+  async function dealAnim(card, target) { ... }
+  
+  // events
+  dealBtn.addEventListener('click', deal)
+  
+  // init
+  function init() { ... }
+  init()
+})()
+```
+
+### Algorithms
+
+#### 1. Fisher-Yates Shuffle Algorithm
+```javascript
+function newShoe(decks) {
+  const cards = []
+  // Generate 52*decks cards
+  
+  // Fisher-Yates random shuffle
+  for (let i = cards.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    [cards[i], cards[j]] = [cards[j], cards[i]]
+  }
+  return cards
+}
+```
+
+#### 2. Hand Evaluation
+```javascript
+function handValue(cards) {
+  let base = 0, aces = 0
+  
+  for (const c of cards) {
+    if (c.r === 'A') {
+      aces++
+      base += 1
+    } else {
+      base += cardValue(c.r)
+    }
+  }
+  
+  // If has Ace, try counting as 11
+  const soft = aces > 0 && base + 10 <= 21
+  const total = soft ? base + 10 : base
+  
+  return { total, soft }
+}
+```
+
+#### 3. Card Dealing Animation
+```javascript
+// Fly from deck
+const makeTransform = (x, y, extraY, rot, scale) =>
+  `translate3d(${x}px, ${y + extraY}px, 0) 
+   translateZ(0) scale(${scale}) rotate(${rot}deg)`
+
+// Start: lift up + rotate
+startY += verticalLift (220px)
+
+// End: lower + rotate
+endY -= verticalLift / 5
+```
+
+
+#### 4. Dealer - `dealerPlay()`
+
+**Standard (no cheat):**
+```javascript
+while (true) {
+  const v = handValue(round.dealer);
+  const soft = v.soft;
+  const total = v.total;
+  
+  const needHit = 
+    total < 17 ||
+    (!state.settings.s17 && total === 17 && soft);
+  
+  if (needHit) {
+    const c = drawCard();
+    round.dealer.push(c);
+    await dealAnim(c, dealerHandEl, true);
+    await sleep(200);
+  } else {
+    break;
+  }
+}
+```
+
+**Cheat (CHEAT_ON = true):**
+```javascript
+if (CHEAT_ON) {
+  // Calculate player's best score
+  const playerBest = Math.max(
+    ...round.playerHands.map(h => {
+      const v = handValue(h.cards);
+      return v.total > 21 ? 0 : v.total;
+    })
+  );
+  
+  // Find card that wins without busting
+  while (true) {
+    const v = handValue(round.dealer);
+    if (v.total >= 17 && v.total > playerBest) break;
+    
+    // Find best card: win without bust
+    const minNeed = Math.max(playerBest + 1 - v.total, 1);
+    const maxSafe = 21 - v.total;
+    
+    const ok = bringCardToTop((c) => {
+      const vv = valueOfRank(c.r);
+      return (vv >= minNeed && vv <= maxSafe) ||
+             (c.r === 'A' && 1 >= minNeed && 1 <= maxSafe);
+    });
+    
+    const c = drawCard();
+    round.dealer.push(c);
+    await dealAnim(c, dealerHandEl, true);
+  }
+}
+```
+
+#### 5. Result
+```javascript
+for (const outcome of outcomes) {
+  const pv = handValue(playerHand).total
+  const dv = handValue(dealerHand).total
+  
+  if (pv > 21) result = 'lose'           // Bust
+  else if (dv > 21) result = 'win'       // Dealer bust
+  else if (pv > dv) result = 'win'       // Higher score
+  else if (pv < dv) result = 'lose'      // Lower score
+  else result = 'tie'                    // Equal
+}
+```
+
+
+---
+
+## Adjustable Parameters
+
+### Game Content
+
+#### Change Number of Decks
+```html
+decks: 6
+```
+
+#### Shuffle Point
+```html
+penetration: 0.75
+Change to: penetration: 0.5  // Shuffle earlier
+```
+
+#### Change Chips
+```javascript
+const CHIP_SET = [5, 25, 50, 100, 500]
+Change to: const CHIP_SET = [10, 50, 100, 500, 1000]
+```
+
+#### Change Initial Bankroll
+```javascript
+bankroll: 1000
+Change to: bankroll: 5000
+```
+
+### Visual Effects
+
+#### Change Table Color
+```css
+--felt: #065f46
+Change to: --felt: #1a472a
+```
+
+#### Change Card Size
+```css
+--card-w: 86px
+Change to: --card-w: 100px
+```
+
+#### Change Animation Speed
+```css
+--deal-ms: 600
+Change to: --deal-ms: 1000  // Slower animation
+```
+
+### Change Audio
+
+#### Change Volume
+```javascript
+audio.volume = 0.25
+Change to: audio.volume = 0.5
+```
+
+#### Add Sound Effect
+```javascript
+// Add to SND
+newSound: (() => {
+  const audio = new Audio('sounds/newsound.mp3')
+  audio.volume = 0.4
+  return audio
+})()
+```
+
+---
+
+## Table Texture
+
+### Overall Design Concept
+
+Background uses **multi-layer texture overlay** to simulate casino felt table surface
+
+### Body Background
+
+**8 layers stacked together:**
+
+#### 1. Texture Layer 1 - Diagonal Lines (45°)
+```css
+repeating-linear-gradient(
+  45deg,
+  transparent,
+  transparent 1px,
+  rgba(255, 255, 255, 0.08) 1px,
+  rgba(255, 255, 255, 0.08) 3px
+)
+```
+
+#### 2. Texture Layer 2 - Reverse Diagonal (-45°)
+```css
+repeating-linear-gradient(
+  -45deg,
+  transparent,
+  transparent 2px,
+  rgba(0, 0, 0, 0.12) 2px,
+  rgba(0, 0, 0, 0.12) 5px
+)
+```
+#### 3. Felt - Pores (vertical)
+#### 4. Felt - Ripples (horizontal)
+#### 5. Subtle Bumps
+#### 6. Light Layer
+#### 7. Shadow Layer
+#### 8. Center Focus
+
+**Background Size Configuration:**
+```css
+background-size: 
+  100% 100%,    /* 1-4 */
+  100% 100%,
+  4px 100%,     /* 3 */
+  100% 4px,     /* 4 */
+  4px 4px,      /* 5 */
+  100% 100%,    /* 6-8 */
+  100% 100%,
+  100% 100%;
+```
+
+### Playing Table Felt Effect (.felt)
+**6 texture layers**
+
+---
+---
+
+
+## 目錄
 
 0. [前情提要](#前情提要)
 1. [有做的功能列表](#有做的功能都統整在這了)
@@ -18,9 +810,8 @@
 ---
 
 ## 前情提要
->這是 <mark>1 player vs 1 dealer</mark> 的 BlackJack Game
-
-> 開啟方式是 直接開 <mark>blackjack.html</mark>
+> 這是 <mark>1 player vs 1 dealer</mark> 的 BlackJack Game<br>
+> 開啟方式是 直接開 <mark>右側pages中的page</mark>
 
 ## 有做的功能跟特色都統整在這了
 - 所有的BlackJack規則 (包含Stands on soft17 開關)
@@ -43,7 +834,7 @@
 ## 結構
 
 ```
-HW3_112550026/
+Blackjack-vanilla-engine-webgame/
 ├── blackjack.html          # main page (開這個)   
 ├── sounds/                 # 音效
 │   ├── bgm.mp3             # background music 
