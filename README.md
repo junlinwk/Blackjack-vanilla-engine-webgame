@@ -1,8 +1,12 @@
 # Blackjack-vanilla-engine-webgame
 ## Language | 語言
+
+> **Live Demo:** [Click here to play the game!](https://junlinwk.github.io/Blackjack-vanilla-engine-webgame/)<br>
+> **展示：** [點我即可遊玩！](https://junlinwk.github.io/Blackjack-vanilla-engine-webgame/)
+
  [English](#catalogue) | [繁體中文](#目錄)
 
- 
+
 ## Catalogue
 
 ## Catalogue
