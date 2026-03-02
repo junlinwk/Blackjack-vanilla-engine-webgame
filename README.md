@@ -25,7 +25,7 @@
 ## Overview
 >This is a <mark>1 player vs 1 dealer</mark> BlackJack Game
 
-> Open the game by directly opening <mark>blackjack.html</mark>
+> Open the game by directly opening <mark>index.html</mark>
 
 ## Feature List
 - All BlackJack rules (including Stands on soft17 toggle)
@@ -49,7 +49,7 @@
 
 ```
 Blackjack-vanilla-engine-webgame/
-├── blackjack.html          # main page (open this)   
+├── index.html          # main page (open this)   
 ├── sounds/                 # sound effects
 │   ├── bgm.mp3             # background music 
 │   ├── deal.mp3            # card dealing
@@ -835,7 +835,7 @@ background-size:
 
 ```
 Blackjack-vanilla-engine-webgame/
-├── blackjack.html          # main page (開這個)   
+├── index.html          # main page (開這個)   
 ├── sounds/                 # 音效
 │   ├── bgm.mp3             # background music 
 │   ├── deal.mp3            # 發牌
