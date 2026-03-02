@@ -1,5 +1,5 @@
 # Blackjack-vanilla-engine-webgame
-## Language/語言
+## Language | 語言
  [English](#catalogue) | [繁體中文](#目錄)
 
  
